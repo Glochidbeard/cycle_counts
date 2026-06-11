@@ -365,14 +365,14 @@
     </div>
   </div>
 
-  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+  <label for="file-input" class="upload-zone" id="upload-zone">
     <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
     </svg>
     <strong>Upload Plantiful Export</strong>
     <p>Tap to select a CSV file</p>
-  </div>
-  <input type="file" id="file-input" accept=".csv" onchange="handleFileInput(event)">
+  </label>
+  <input type="file" id="file-input" onchange="handleFileInput(event)">
 </div>
 
 <!-- AREAS -->
@@ -545,7 +545,7 @@ function init() {
 function handleFileInput(e) { const f = e.target.files[0]; if (f) loadFile(f); }
 
 async function loadFile(file) {
-  if (!file.name.endsWith('.csv')) { showToast('Please select a CSV file'); return; }
+  if (!file.name.toLowerCase().endsWith('.csv')) { showToast('Please select a CSV file'); return; }
   document.getElementById('upload-zone').innerHTML = '<p>Loading…</p>';
   const text = await file.text();
   const { headers, rows } = parseCSV(text);
