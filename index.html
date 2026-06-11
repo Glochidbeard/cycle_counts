@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cycle Count</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d6a4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --green: #2d6a4f;
+    --green-light: #52b788;
+    --green-pale: #d8f3dc;
+    --amber: #e9a825;
+    --red: #c0392b;
+    --red-pale: #fdecea;
+    --bg: #f4f6f4;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #e0e7e0;
+    --radius: 12px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    min-height: 100vh;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    background: var(--green);
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    height: 60px;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .topbar h1 { font-size: 20px; font-weight: 600; flex: 1; }
+  .topbar .subtitle { font-size: 13px; opacity: 0.8; }
+  .back-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    touch-action: manipulation;
+  }
+  .back-btn:active { background: rgba(255,255,255,0.3); }
+
+  /* SCREENS */
+  .screen { display: none; padding: 24px 20px; max-width: 1200px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 3px dashed var(--green-light);
+    border-radius: var(--radius);
+    padding: 60px 30px;
+    text-align: center;
+    background: white;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { background: var(--green-pale); }
+  .upload-zone svg { color: var(--green); margin-bottom: 14px; }
+  .upload-zone p { color: var(--muted); font-size: 17px; margin-top: 8px; }
+  .upload-zone strong { color: var(--green); font-size: 20px; display: block; margin-bottom: 6px; }
+  #file-input { display: none; }
+
+  .session-banner {
+    background: var(--green-pale);
+    border: 1px solid var(--green-light);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 15px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .session-banner strong { color: var(--green); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 26px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.15s, transform 0.1s;
+    user-select: none;
+    text-decoration: none;
+  }
+  .btn:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); }
+  .btn-amber { background: var(--amber); color: white; }
+  .btn-red { background: var(--red); color: white; }
+  .btn-sm { padding: 9px 16px; font-size: 14px; border-radius: 8px; }
+  .btn-full { width: 100%; }
+
+  /* AREA GRID */
+  .area-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .area-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    border: 2px solid transparent;
+    touch-action: manipulation;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .area-card:active { transform: scale(0.97); }
+  .area-card.complete { border-color: var(--green-light); background: var(--green-pale); }
+  .area-card .area-letter { font-size: 52px; font-weight: 700; color: var(--green); line-height: 1; }
+  .area-card .area-stats { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .area-card .progress-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .area-card .progress-fill { height: 100%; background: var(--green-light); border-radius: 3px; transition: width 0.3s; }
+
+  /* LOCATION LIST */
+  .loc-list { display: flex; flex-direction: column; gap: 10px; }
+  .loc-item {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    touch-action: manipulation;
+    border-left: 5px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .loc-item:active { opacity: 0.85; }
+  .loc-item.audited { border-left-color: var(--green-light); }
+  .loc-item.partial { border-left-color: var(--amber); }
+  .loc-name { font-size: 18px; font-weight: 600; }
+  .loc-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .loc-badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+  .badge-done { background: var(--green-pale); color: var(--green); }
+  .badge-partial { background: #fef9ee; color: #b7770d; }
+  .badge-todo { background: #f3f4f6; color: var(--muted); }
+
+  /* AUDIT */
+  .audit-header {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .audit-loc-name { font-size: 22px; font-weight: 700; color: var(--green); }
+  .audit-progress { font-size: 14px; color: var(--muted); }
+  .plant-cards { display: flex; flex-direction: column; gap: 20px; }
+
+  .plant-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 2px solid var(--border);
+    transition: border-color 0.2s;
+  }
+  .plant-card.saved { border-color: var(--green-light); }
+  .plant-card-header {
+    background: var(--green);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .plant-card-header .species { font-size: 17px; font-weight: 600; }
+  .plant-card-header .crop-code { font-size: 13px; opacity: 0.85; font-family: monospace; }
+  .saved-chip {
+    background: var(--green-light);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: none;
+  }
+  .plant-card.saved .saved-chip { display: inline-block; }
+
+  .plant-card-body { display: grid; grid-template-columns: 1fr 1fr; }
+
+  .panel-plantiful { padding: 20px; border-right: 1px solid var(--border); background: #fafafa; }
+  .panel-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; }
+  .data-row { margin-bottom: 12px; }
+  .data-row .dr-label { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .data-row .dr-value { font-size: 16px; font-weight: 600; }
+  .data-row .dr-value.qty { font-size: 28px; color: var(--green); }
+
+  .panel-entry { padding: 20px; }
+
+  .entry-row {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .entry-row.split-row { border-left: 4px solid var(--amber); }
+  .entry-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .entry-row-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .remove-split {
+    background: var(--red-pale);
+    border: none;
+    color: var(--red);
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+  }
+
+  .loc-input-row { margin-bottom: 10px; }
+  .loc-input-row label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .loc-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: white;
+    color: var(--text);
+  }
+  .loc-input:focus { outline: none; border-color: var(--green); }
+
+  .qty-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .qty-field label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .qty-field input {
+    width: 100%;
+    padding: 12px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 26px;
+    font-weight: 700;
+    text-align: center;
+    background: white;
+    color: var(--text);
+    -moz-appearance: textfield;
+  }
+  .qty-field input::-webkit-outer-spin-button,
+  .qty-field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .qty-field input:focus { outline: none; border-color: var(--green); }
+  .qty-field input.alive { border-color: #a8d5b5; }
+  .qty-field input.dead { border-color: #f0a8a8; }
+  .qty-field input.alive:focus { border-color: var(--green); }
+  .qty-field input.dead:focus { border-color: var(--red); }
+
+  .entry-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* EXPORT */
+  .export-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .export-card h2 { font-size: 22px; margin-bottom: 8px; }
+  .export-card p { color: var(--muted); margin-bottom: 24px; font-size: 15px; line-height: 1.6; }
+  .export-stats { display: flex; justify-content: center; gap: 40px; margin-bottom: 28px; }
+  .stat-box { text-align: center; }
+  .stat-box .num { font-size: 42px; font-weight: 700; color: var(--green); line-height: 1; }
+  .stat-box .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .export-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1a1a1a;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 700px) {
+    .plant-card-body { grid-template-columns: 1fr; }
+    .panel-plantiful { border-right: none; border-bottom: 1px solid var(--border); }
+    .area-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <h1 id="topbar-title">🌿 Cycle Count</h1>
+  <span id="topbar-sub"></span>
+  <button class="back-btn" id="back-btn" style="display:none" onclick="goBack()">← Back</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- UPLOAD -->
+<div class="screen active" id="screen-upload">
+  <div id="session-banner" style="display:none" class="session-banner">
+    <div>
+      <strong id="session-info"></strong>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px">Session saved locally — continue or upload a new file to start over</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="goToAreas()">Continue →</button>
+      <button class="btn btn-sm btn-secondary" onclick="clearSession()">New Audit</button>
+    </div>
+  </div>
+
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+    </svg>
+    <strong>Upload Plantiful Export</strong>
+    <p>Tap to select a CSV file</p>
+  </div>
+  <input type="file" id="file-input" accept=".csv" onchange="handleFileInput(event)">
+</div>
+
+<!-- AREAS -->
+<div class="screen" id="screen-areas">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:22px;font-weight:700">Select Area to Audit</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:2px" id="areas-summary"></div>
+    </div>
+    <button class="btn btn-amber" onclick="pushNav(goToExport)">Export Results →</button>
+  </div>
+  <div class="area-grid" id="area-grid"></div>
+</div>
+
+<!-- LOCATIONS -->
+<div class="screen" id="screen-locations">
+  <div style="font-size:22px;font-weight:700;margin-bottom:4px" id="loc-screen-title"></div>
+  <div style="font-size:14px;color:var(--muted);margin-bottom:20px" id="loc-screen-sub"></div>
+  <div class="loc-list" id="loc-list"></div>
+</div>
+
+<!-- AUDIT -->
+<div class="screen" id="screen-audit">
+  <div class="audit-header">
+    <div>
+      <div class="audit-loc-name" id="audit-loc-name"></div>
+      <div class="audit-progress" id="audit-progress"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="goToLocations(currentArea)">← Locations</button>
+  </div>
+  <div class="plant-cards" id="plant-cards"></div>
+</div>
+
+<!-- EXPORT -->
+<div class="screen" id="screen-export">
+  <div class="export-card">
+    <h2>Export Cycle Count</h2>
+    <p>
+      <strong>plantiful_import.csv</strong> — only audited rows, alive qty, ready to upload<br>
+      <strong>audit_analytics.csv</strong> — full record with dead counts &amp; discrepancies
+    </p>
+    <div class="export-stats">
+      <div class="stat-box">
+        <div class="num" id="export-total">—</div>
+        <div class="lbl">Inventory rows</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="export-audited">—</div>
+        <div class="lbl">Rows audited</div>
+      </div>
+    </div>
+    <div class="export-btns">
+      <button class="btn btn-primary" style="font-size:17px;padding:16px 32px" onclick="downloadPlantiful()">⬇ Plantiful Import</button>
+      <button class="btn btn-secondary" style="font-size:17px;padding:16px 32px" onclick="downloadAnalytics()">⬇ Analytics</button>
+    </div>
+  </div>
+  <button class="btn btn-secondary btn-full" onclick="goToAreas()">← Back to Areas</button>
+</div>
+
+<script>
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+const STORE = {
+  inv:     () => JSON.parse(localStorage.getItem('cc_inv')  || '[]'),
+  hdrs:    () => JSON.parse(localStorage.getItem('cc_hdrs') || '[]'),
+  audit:   () => JSON.parse(localStorage.getItem('cc_audit')|| '{}'),
+  setInv:  v  => localStorage.setItem('cc_inv',   JSON.stringify(v)),
+  setHdrs: v  => localStorage.setItem('cc_hdrs',  JSON.stringify(v)),
+  setAudit:v  => localStorage.setItem('cc_audit', JSON.stringify(v)),
+  clear:   ()  => ['cc_inv','cc_hdrs','cc_audit'].forEach(k => localStorage.removeItem(k))
+};
+
+// ── CSV PARSER ────────────────────────────────────────────────────────────────
+function parseCSV(raw) {
+  if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i], n = raw[i+1];
+    if (inQ) {
+      if (c === '"' && n === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else {
+      if (c === '"') { inQ = true; }
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n' || (c === '\r' && n === '\n')) {
+        if (c === '\r') i++;
+        row.push(field); field = '';
+        if (row.some(f => f !== '')) rows.push(row);
+        row = [];
+      } else field += c;
+    }
+  }
+  if (field || row.length) { row.push(field); if (row.some(f=>f!=='')) rows.push(row); }
+  if (!rows.length) return { headers: [], rows: [] };
+  const headers = rows[0];
+  const data = rows.slice(1).map(r => {
+    const o = {};
+    headers.forEach((h, i) => o[h] = (r[i] || '').trim());
+    return o;
+  });
+  return { headers, rows: data };
+}
+
+function toCSV(headers, rows) {
+  const esc = v => {
+    const s = String(v ?? '');
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  return [headers.map(esc).join(','),
+    ...rows.map(r => headers.map(h => esc(r[h] ?? '')).join(','))
+  ].join('\r\n');
+}
+
+function downloadCSV(filename, content) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+let screenStack = [];
+
+function showScreen(id, title, sub, showBack) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('topbar-title').textContent = title || '🌿 Cycle Count';
+  document.getElementById('topbar-sub').textContent = sub || '';
+  document.getElementById('back-btn').style.display = showBack ? 'flex' : 'none';
+  window.scrollTo(0, 0);
+}
+
+function pushNav(fn) { screenStack.push(fn); fn(); }
+function goBack() {
+  if (screenStack.length > 1) { screenStack.pop(); screenStack[screenStack.length-1](); }
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentArea = null;
+let currentLocData = [];
+let currentLocIndex = 0;
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+function init() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+
+  screenStack = [() => showScreen('screen-upload', '🌿 Cycle Count', '', false)];
+  showScreen('screen-upload', '🌿 Cycle Count', '', false);
+
+  const inv = STORE.inv();
+  const audit = STORE.audit();
+  if (inv.length) {
+    document.getElementById('session-banner').style.display = 'flex';
+    document.getElementById('session-info').textContent =
+      `Session active: ${inv.length} inventory rows, ${Object.keys(audit).length} entries audited`;
+  }
+
+  const zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+  });
+}
+
+function handleFileInput(e) { const f = e.target.files[0]; if (f) loadFile(f); }
+
+async function loadFile(file) {
+  if (!file.name.endsWith('.csv')) { showToast('Please select a CSV file'); return; }
+  document.getElementById('upload-zone').innerHTML = '<p>Loading…</p>';
+  const text = await file.text();
+  const { headers, rows } = parseCSV(text);
+  STORE.setInv(rows); STORE.setHdrs(headers); STORE.setAudit({});
+  showToast(`Loaded ${rows.length} inventory rows`);
+  screenStack = [];
+  pushNav(goToAreas);
+}
+
+function clearSession() {
+  STORE.clear();
+  document.getElementById('session-banner').style.display = 'none';
+  document.getElementById('upload-zone').innerHTML = `
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+    </svg>
+    <strong>Upload Plantiful Export</strong>
+    <p>Tap to select a CSV file</p>`;
+  showToast('Session cleared');
+}
+
+// ── AREAS ─────────────────────────────────────────────────────────────────────
+function goToAreas() {
+  showScreen('screen-areas', '🌿 Cycle Count', '', false);
+
+  const inv = STORE.inv();
+  const audit = STORE.audit();
+
+  const areaMap = {};
+  inv.forEach(row => {
+    const area = (row['Locations'] || '').split('>')[0].trim();
+    if (!area) return;
+    if (!areaMap[area]) areaMap[area] = { total: 0, done: 0 };
+    areaMap[area].total++;
+    if (audit[`${row['Crop code']}||${row['Locations'].trim()}`]) areaMap[area].done++;
+  });
+
+  const areas = Object.keys(areaMap).sort();
+  let totalDone = 0, totalAll = 0;
+  areas.forEach(a => { totalDone += areaMap[a].done; totalAll += areaMap[a].total; });
+  document.getElementById('areas-summary').textContent = `${totalDone} of ${totalAll} rows audited`;
+
+  document.getElementById('area-grid').innerHTML = areas.map(area => {
+    const { total, done } = areaMap[area];
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    const cls = done === total && total > 0 ? 'complete' : '';
+    return `<div class="area-card ${cls}" onclick="pushNav(()=>goToLocations('${area}'))">
+      <div class="area-letter">${area}</div>
+      <div class="area-stats">${done} / ${total} rows</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── LOCATIONS ─────────────────────────────────────────────────────────────────
+function goToLocations(area) {
+  currentArea = area;
+  showScreen('screen-locations', `Area ${area}`, '', true);
+
+  const inv = STORE.inv();
+  const audit = STORE.audit();
+
+  const locMap = {};
+  inv.forEach(row => {
+    const loc = (row['Locations'] || '').trim();
+    if (loc.split('>')[0].trim() !== area) return;
+    locMap[loc] = locMap[loc] || [];
+    locMap[loc].push(row);
+  });
+
+  currentLocData = Object.keys(locMap).sort().map(loc => {
+    const plants = locMap[loc];
+    const entries = plants.map(p => ({
+      plant: p,
+      audit: audit[`${p['Crop code']}||${loc}`] || null
+    }));
+    return { location: loc, entries, audited: entries.filter(e => e.audit).length, total: entries.length };
+  });
+
+  const fullyDone = currentLocData.filter(l => l.audited === l.total).length;
+  document.getElementById('loc-screen-title').textContent = `Area ${area}`;
+  document.getElementById('loc-screen-sub').textContent =
+    `${fullyDone} of ${currentLocData.length} locations fully audited`;
+
+  document.getElementById('loc-list').innerHTML = currentLocData.map((loc, i) => {
+    const complete = loc.audited === loc.total && loc.total > 0;
+    const partial  = loc.audited > 0 && loc.audited < loc.total;
+    const cls    = complete ? 'audited' : partial ? 'partial' : '';
+    const badge  = complete
+      ? `<span class="loc-badge badge-done">✓ Done</span>`
+      : partial
+      ? `<span class="loc-badge badge-partial">${loc.audited}/${loc.total}</span>`
+      : `<span class="loc-badge badge-todo">${loc.total} plant${loc.total!==1?'s':''}</span>`;
+    const species = loc.entries.map(e => e.plant['Species'] || e.plant['Product'] || '').filter(Boolean).join(' · ');
+    return `<div class="loc-item ${cls}" onclick="pushNav(()=>goToAudit(${i}))">
+      <div>
+        <div class="loc-name">${loc.location}</div>
+        <div class="loc-meta">${species}</div>
+      </div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+// ── AUDIT ─────────────────────────────────────────────────────────────────────
+function goToAudit(locIndex) {
+  currentLocIndex = locIndex;
+  const loc = currentLocData[locIndex];
+  showScreen('screen-audit', 'Audit', loc.location, true);
+  document.getElementById('audit-loc-name').textContent = loc.location;
+  renderAuditProgress();
+  document.getElementById('plant-cards').innerHTML =
+    loc.entries.map((entry, i) => buildPlantCard(entry, i, loc.location)).join('');
+}
+
+function renderAuditProgress() {
+  const loc = currentLocData[currentLocIndex];
+  document.getElementById('audit-progress').textContent =
+    `${loc.audited} of ${loc.entries.length} saved`;
+}
+
+function buildPlantCard(entry, idx, defaultLoc) {
+  const p = entry.plant;
+  const audit = entry.audit;
+  const cropCode = p['Crop code'];
+  const origLoc  = (p['Locations'] || '').trim();
+
+  const formEntries = audit
+    ? audit.entries
+    : [{ location: origLoc, alive_qty: '', dead_qty: '' }];
+
+  const primary = formEntries[0];
+  const splitRows = formEntries.slice(1).map((e, si) =>
+    buildSplitRow(idx, si + 1, e.location, e.alive_qty, e.dead_qty)
+  ).join('');
+
+  const savedCls = audit ? 'saved' : '';
+  const clearBtn = audit
+    ? `<button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${idx})">Clear</button>` : '';
+
+  return `<div class="plant-card ${savedCls}" id="card-${idx}" data-crop="${esc(cropCode)}" data-orig-loc="${esc(origLoc)}">
+    <div class="plant-card-header">
+      <div>
+        <div class="species">${p['Species'] || p['Product'] || '—'}</div>
+        <div class="crop-code">${cropCode} · ${p['Variant']||''} ${p['Current size']||''}</div>
+      </div>
+      <span class="saved-chip">✓ Saved</span>
+    </div>
+    <div class="plant-card-body">
+      <div class="panel-plantiful">
+        <div class="panel-label">Plantiful Record</div>
+        <div class="data-row"><div class="dr-label">Location</div><div class="dr-value">${p['Locations']}</div></div>
+        <div class="data-row"><div class="dr-label">Qty on record</div><div class="dr-value qty">${p['Available qty']}</div></div>
+        <div class="data-row"><div class="dr-label">Status</div><div class="dr-value">${p['Status']||'—'}</div></div>
+        <div class="data-row"><div class="dr-label">Job #</div><div class="dr-value">${p['Job #']||'—'}</div></div>
+      </div>
+      <div class="panel-entry">
+        <div class="panel-label">Field Count</div>
+        <div class="entry-row" id="entry-primary-${idx}">
+          <div class="entry-row-header"><span class="entry-row-label">Primary location</span></div>
+          <div class="loc-input-row">
+            <label>Location</label>
+            <input class="loc-input" id="loc-0-${idx}" type="text" value="${esc(primary.location)}">
+          </div>
+          <div class="qty-row">
+            <div class="qty-field"><label>Alive</label>
+              <input class="alive" id="alive-0-${idx}" type="number" min="0" inputmode="numeric"
+                value="${primary.alive_qty !== '' ? primary.alive_qty : ''}" placeholder="0">
+            </div>
+            <div class="qty-field"><label>Dead</label>
+              <input class="dead" id="dead-0-${idx}" type="number" min="0" inputmode="numeric"
+                value="${primary.dead_qty !== '' ? primary.dead_qty : ''}" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div id="splits-${idx}">${splitRows}</div>
+        <div class="entry-actions">
+          <button class="btn btn-secondary btn-sm" onclick="addSplit(${idx},'${esc(origLoc)}')">+ Split</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEntry(${idx})">Save ✓</button>
+          ${clearBtn}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+const splitCounters = {};
+
+function addSplit(cardIdx, defaultLoc) {
+  const n = (splitCounters[cardIdx] = (splitCounters[cardIdx] || 0) + 1);
+  document.getElementById(`splits-${cardIdx}`)
+    .insertAdjacentHTML('beforeend', buildSplitRow(cardIdx, n, defaultLoc, '', ''));
+}
+
+function buildSplitRow(cardIdx, si, loc, alive, dead) {
+  return `<div class="entry-row split-row" id="split-${cardIdx}-${si}">
+    <div class="entry-row-header">
+      <span class="entry-row-label">Split ${si}</span>
+      <button class="remove-split" onclick="document.getElementById('split-${cardIdx}-${si}').remove()">×</button>
+    </div>
+    <div class="loc-input-row">
+      <label>Location</label>
+      <input class="loc-input" id="loc-${si}-${cardIdx}" type="text" value="${esc(loc)}" placeholder="e.g. F > 12 > 09">
+    </div>
+    <div class="qty-row">
+      <div class="qty-field"><label>Alive</label>
+        <input class="alive" id="alive-${si}-${cardIdx}" type="number" min="0" inputmode="numeric" value="${alive}" placeholder="0">
+      </div>
+      <div class="qty-field"><label>Dead</label>
+        <input class="dead" id="dead-${si}-${cardIdx}" type="number" min="0" inputmode="numeric" value="${dead}" placeholder="0">
+      </div>
+    </div>
+  </div>`;
+}
+
+function collectEntries(cardIdx) {
+  const entries = [];
+  const val = id => document.getElementById(id)?.value ?? '';
+  entries.push({
+    location:  val(`loc-0-${cardIdx}`).trim(),
+    alive_qty: val(`alive-0-${cardIdx}`) || 0,
+    dead_qty:  val(`dead-0-${cardIdx}`)  || 0
+  });
+  document.getElementById(`splits-${cardIdx}`)
+    .querySelectorAll('.split-row').forEach(row => {
+      const si = row.id.split('-').pop();
+      const loc = val(`loc-${si}-${cardIdx}`).trim();
+      if (loc) entries.push({
+        location: loc,
+        alive_qty: val(`alive-${si}-${cardIdx}`) || 0,
+        dead_qty:  val(`dead-${si}-${cardIdx}`)  || 0
+      });
+    });
+  return entries;
+}
+
+function saveEntry(cardIdx) {
+  const card = document.getElementById(`card-${cardIdx}`);
+  const cropCode = card.dataset.crop;
+  const origLoc  = card.dataset.origLoc;
+  const entries  = collectEntries(cardIdx);
+
+  const audit = STORE.audit();
+  audit[`${cropCode}||${origLoc}`] = {
+    crop_code: cropCode, original_location: origLoc,
+    entries, timestamp: new Date().toISOString()
+  };
+  STORE.setAudit(audit);
+
+  card.classList.add('saved');
+  card.querySelector('.saved-chip').style.display = 'inline-block';
+
+  const loc = currentLocData[currentLocIndex];
+  loc.entries[cardIdx].audit = audit[`${cropCode}||${origLoc}`];
+  loc.audited = loc.entries.filter(e => e.audit).length;
+
+  card.querySelector('.entry-actions').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="addSplit(${cardIdx},'${esc(origLoc)}')">+ Split</button>
+    <button class="btn btn-primary btn-sm" onclick="saveEntry(${cardIdx})">Save ✓</button>
+    <button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${cardIdx})">Clear</button>`;
+
+  showToast('Entry saved');
+  renderAuditProgress();
+}
+
+function clearEntry(cardIdx) {
+  const card = document.getElementById(`card-${cardIdx}`);
+  const cropCode = card.dataset.crop;
+  const origLoc  = card.dataset.origLoc;
+
+  const audit = STORE.audit();
+  delete audit[`${cropCode}||${origLoc}`];
+  STORE.setAudit(audit);
+
+  const loc = currentLocData[currentLocIndex];
+  loc.entries[cardIdx].audit = null;
+  loc.audited = loc.entries.filter(e => e.audit).length;
+
+  card.outerHTML = buildPlantCard(loc.entries[cardIdx], cardIdx, loc.location);
+  renderAuditProgress();
+  showToast('Entry cleared');
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+function goToExport() {
+  showScreen('screen-export', 'Export', '', true);
+  const inv   = STORE.inv();
+  const audit = STORE.audit();
+  document.getElementById('export-total').textContent   = inv.length;
+  document.getElementById('export-audited').textContent = Object.keys(audit).length;
+}
+
+function buildOutputs() {
+  const inv   = STORE.inv();
+  const hdrs  = STORE.hdrs();
+  const audit = STORE.audit();
+  const o1 = [], o2 = [];
+
+  Object.values(audit).forEach(a => {
+    const orig = inv.find(r => r['Crop code'] === a.crop_code && r['Locations'].trim() === a.original_location);
+    const origQty = parseInt(orig?.['Available qty'] || '0', 10) || 0;
+
+    a.entries.forEach(e => {
+      const alive = parseInt(e.alive_qty, 10) || 0;
+      const dead  = parseInt(e.dead_qty,  10) || 0;
+      if (orig) {
+        const row = { ...orig, 'Available qty': String(alive), 'Locations': e.location };
+        o1.push(row);
+      }
+      o2.push({
+        'Crop code': a.crop_code,
+        'Species': orig?.['Species'] || '',
+        'Original location': a.original_location,
+        'Audited location': e.location,
+        'Original Plantiful qty': origQty,
+        'Alive qty (field)': alive,
+        'Dead qty': dead,
+        'Total counted': alive + dead,
+        'Discrepancy (alive vs Plantiful)': alive - origQty,
+        'Audit timestamp': a.timestamp
+      });
+    });
+  });
+  return { o1, o2, hdrs };
+}
+
+function downloadPlantiful() {
+  const { o1, hdrs } = buildOutputs();
+  if (!o1.length) { showToast('No audited entries to export'); return; }
+  const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+  downloadCSV(`plantiful_import_${stamp}.csv`, toCSV(hdrs, o1));
+  showToast('Plantiful import downloaded');
+}
+
+function downloadAnalytics() {
+  const { o2 } = buildOutputs();
+  if (!o2.length) { showToast('No audited entries to export'); return; }
+  const o2hdrs = ['Crop code','Species','Original location','Audited location',
+    'Original Plantiful qty','Alive qty (field)','Dead qty',
+    'Total counted','Discrepancy (alive vs Plantiful)','Audit timestamp'];
+  const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+  downloadCSV(`audit_analytics_${stamp}.csv`, toCSV(o2hdrs, o2));
+  showToast('Analytics downloaded');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function esc(s) {
+  return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
