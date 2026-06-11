@@ -63,6 +63,19 @@
     touch-action: manipulation;
   }
   .back-btn:active { background: rgba(255,255,255,0.3); }
+  .lang-btn {
+    background: rgba(255,255,255,0.18);
+    border: 1.5px solid rgba(255,255,255,0.5);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    touch-action: manipulation;
+  }
+  .lang-btn:active { background: rgba(255,255,255,0.3); }
 
   /* SCREENS */
   .screen { display: none; padding: 24px 20px; max-width: 1200px; margin: 0 auto; }
@@ -78,6 +91,7 @@
     cursor: pointer;
     transition: background 0.2s;
     margin-bottom: 20px;
+    display: block;
   }
   .upload-zone:hover, .upload-zone.drag-over { background: var(--green-pale); }
   .upload-zone svg { color: var(--green); margin-bottom: 14px; }
@@ -121,7 +135,6 @@
   .btn-primary { background: var(--green); color: white; }
   .btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); }
   .btn-amber { background: var(--amber); color: white; }
-  .btn-red { background: var(--red); color: white; }
   .btn-sm { padding: 9px 16px; font-size: 14px; border-radius: 8px; }
   .btn-full { width: 100%; }
 
@@ -223,7 +236,6 @@
     display: none;
   }
   .plant-card.saved .saved-chip { display: inline-block; }
-
   .plant-card-body { display: grid; grid-template-columns: 1fr 1fr; }
 
   .panel-plantiful { padding: 20px; border-right: 1px solid var(--border); background: #fafafa; }
@@ -234,7 +246,6 @@
   .data-row .dr-value.qty { font-size: 28px; color: var(--green); }
 
   .panel-entry { padding: 20px; }
-
   .entry-row {
     background: #f9fafb;
     border: 1px solid var(--border);
@@ -294,7 +305,6 @@
   .qty-field input.dead { border-color: #f0a8a8; }
   .qty-field input.alive:focus { border-color: var(--green); }
   .qty-field input.dead:focus { border-color: var(--red); }
-
   .entry-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 
   /* EXPORT */
@@ -345,9 +355,10 @@
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <h1 id="topbar-title">🌿 Cycle Count</h1>
+  <h1 id="topbar-title">Cycle Count</h1>
   <span id="topbar-sub"></span>
-  <button class="back-btn" id="back-btn" style="display:none" onclick="goBack()">← Back</button>
+  <button class="back-btn" id="back-btn" style="display:none" onclick="goBack()" data-i18n="back_btn">Back</button>
+  <button class="lang-btn" id="lang-btn" onclick="toggleLang()">ES</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -357,20 +368,19 @@
   <div id="session-banner" style="display:none" class="session-banner">
     <div>
       <strong id="session-info"></strong>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px">Session saved locally — continue or upload a new file to start over</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px" id="session-saved-text"></div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="goToAreas()">Continue →</button>
-      <button class="btn btn-sm btn-secondary" onclick="clearSession()">New Audit</button>
+      <button class="btn btn-primary" onclick="goToAreas()" id="btn-continue"></button>
+      <button class="btn btn-sm btn-secondary" onclick="clearSession()" id="btn-new-audit"></button>
     </div>
   </div>
-
   <label for="file-input" class="upload-zone" id="upload-zone">
     <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
     </svg>
-    <strong>Upload Plantiful Export</strong>
-    <p>Tap to select a CSV file</p>
+    <strong id="upload-title"></strong>
+    <p id="upload-subtitle"></p>
   </label>
   <input type="file" id="file-input" onchange="handleFileInput(event)">
 </div>
@@ -379,10 +389,10 @@
 <div class="screen" id="screen-areas">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:12px">
     <div>
-      <div style="font-size:22px;font-weight:700">Select Area to Audit</div>
+      <div style="font-size:22px;font-weight:700" id="areas-title"></div>
       <div style="font-size:14px;color:var(--muted);margin-top:2px" id="areas-summary"></div>
     </div>
-    <button class="btn btn-amber" onclick="pushNav(goToExport)">Export Results →</button>
+    <button class="btn btn-amber" onclick="pushNav(goToExport)" id="btn-export-results"></button>
   </div>
   <div class="area-grid" id="area-grid"></div>
 </div>
@@ -401,7 +411,7 @@
       <div class="audit-loc-name" id="audit-loc-name"></div>
       <div class="audit-progress" id="audit-progress"></div>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="goToLocations(currentArea)">← Locations</button>
+    <button class="btn btn-secondary btn-sm" onclick="goToLocations(currentArea)" id="btn-back-locations"></button>
   </div>
   <div class="plant-cards" id="plant-cards"></div>
 </div>
@@ -409,42 +419,199 @@
 <!-- EXPORT -->
 <div class="screen" id="screen-export">
   <div class="export-card">
-    <h2>Export Cycle Count</h2>
+    <h2 id="export-title"></h2>
     <p>
-      <strong>plantiful_import.csv</strong> — only audited rows, alive qty, ready to upload<br>
-      <strong>audit_analytics.csv</strong> — full record with dead counts &amp; discrepancies
+      <strong>plantiful_import.csv</strong> — <span id="export-desc-o1"></span><br>
+      <strong>audit_analytics.csv</strong> — <span id="export-desc-o2"></span>
     </p>
     <div class="export-stats">
       <div class="stat-box">
         <div class="num" id="export-total">—</div>
-        <div class="lbl">Inventory rows</div>
+        <div class="lbl" id="stat-label-inventory"></div>
       </div>
       <div class="stat-box">
         <div class="num" id="export-audited">—</div>
-        <div class="lbl">Rows audited</div>
+        <div class="lbl" id="stat-label-audited"></div>
       </div>
     </div>
     <div class="export-btns">
-      <button class="btn btn-primary" style="font-size:17px;padding:16px 32px" onclick="downloadPlantiful()">⬇ Plantiful Import</button>
-      <button class="btn btn-secondary" style="font-size:17px;padding:16px 32px" onclick="downloadAnalytics()">⬇ Analytics</button>
+      <button class="btn btn-primary" style="font-size:17px;padding:16px 32px" onclick="downloadPlantiful()" id="btn-download-plantiful"></button>
+      <button class="btn btn-secondary" style="font-size:17px;padding:16px 32px" onclick="downloadAnalytics()" id="btn-download-analytics"></button>
     </div>
   </div>
-  <button class="btn btn-secondary btn-full" onclick="goToAreas()">← Back to Areas</button>
+  <button class="btn btn-secondary btn-full" onclick="goToAreas()" id="btn-back-areas"></button>
 </div>
 
 <script>
-// ── STORAGE ──────────────────────────────────────────────────────────────────
-const STORE = {
-  inv:     () => JSON.parse(localStorage.getItem('cc_inv')  || '[]'),
-  hdrs:    () => JSON.parse(localStorage.getItem('cc_hdrs') || '[]'),
-  audit:   () => JSON.parse(localStorage.getItem('cc_audit')|| '{}'),
-  setInv:  v  => localStorage.setItem('cc_inv',   JSON.stringify(v)),
-  setHdrs: v  => localStorage.setItem('cc_hdrs',  JSON.stringify(v)),
-  setAudit:v  => localStorage.setItem('cc_audit', JSON.stringify(v)),
-  clear:   ()  => ['cc_inv','cc_hdrs','cc_audit'].forEach(k => localStorage.removeItem(k))
+// ── I18N ──────────────────────────────────────────────────────────────────────
+const STRINGS = {
+  en: {
+    app_title:                 'Cycle Count',
+    back_btn:                  'Back',
+    session_active:            'Session active: {count} inventory rows, {audited} entries audited',
+    session_saved:             'Session saved locally - continue or upload a new file to start over',
+    btn_continue:              'Continue',
+    btn_new_audit:             'New Audit',
+    upload_title:              'Upload Plantiful Export',
+    upload_subtitle:           'Tap to select a CSV file',
+    upload_loading:            'Loading',
+    toast_not_csv:             'Please select a CSV file',
+    toast_loaded:              'Loaded {count} inventory rows',
+    toast_session_cleared:     'Session cleared',
+    areas_title:               'Select Area to Audit',
+    areas_summary:             '{done} of {total} rows audited',
+    btn_export_results:        'Export Results',
+    area_card_stats:           '{done} / {total} rows',
+    loc_screen_sub:            '{done} of {total} locations fully audited',
+    badge_done:                'Done',
+    badge_todo:                '{count} plant',
+    badge_todo_plural:         '{count} plants',
+    audit_topbar:              'Audit',
+    audit_progress:            '{done} of {total} saved',
+    btn_back_locations:        'Back to Locations',
+    panel_label_plantiful:     'Plantiful Record',
+    dr_label_location:         'Location',
+    dr_label_qty:              'Qty on record',
+    dr_label_status:           'Status',
+    dr_label_job:              'Job #',
+    panel_label_field:         'Field Count',
+    entry_label_primary:       'Primary location',
+    label_location:            'Location',
+    label_alive:               'Alive',
+    label_dead:                'Dead',
+    placeholder_location:      'e.g. F > 12 > 09',
+    split_label:               'Split {n}',
+    btn_split:                 'Add Split',
+    btn_save:                  'Save',
+    btn_clear:                 'Clear',
+    saved_chip:                'Saved',
+    toast_entry_saved:         'Entry saved',
+    toast_entry_cleared:       'Entry cleared',
+    export_title:              'Export Cycle Count',
+    export_desc_o1:            'Only audited rows - alive qty - ready to upload',
+    export_desc_o2:            'Full record with dead counts and discrepancies',
+    stat_label_inventory:      'Inventory rows',
+    stat_label_audited:        'Rows audited',
+    btn_download_plantiful:    'Download Plantiful Import',
+    btn_download_analytics:    'Download Analytics',
+    btn_back_areas:            'Back to Areas',
+    toast_nothing_to_export:   'No audited entries to export',
+    toast_plantiful_downloaded:'Plantiful import downloaded',
+    toast_analytics_downloaded:'Analytics downloaded',
+    lang_toggle_label:         'ES'
+  },
+  es: {
+    app_title:                 'Recuento del Ciclo',
+    back_btn:                  'Atras',
+    session_active:            'Sesion activa: {count} filas de inventario, {audited} entradas registradas',
+    session_saved:             'Sesion guardada localmente - continuar o suba un nuevo archivo para empezar de nuevo',
+    btn_continue:              'Continuar',
+    btn_new_audit:             'Nuevo Registro',
+    upload_title:              'Subir Exportacion de Plantiful',
+    upload_subtitle:           'Tap para seleccionar un documento CSV',
+    upload_loading:            'Cargando',
+    toast_not_csv:             'Por favor seleccione un documento CSV',
+    toast_loaded:              'Cargado {count} filas de inventario',
+    toast_session_cleared:     'Sesion despejada',
+    areas_title:               'Seleccione Area a Registrar',
+    areas_summary:             '{done} de {total} filas registradas',
+    btn_export_results:        'Exportar Resultados',
+    area_card_stats:           '{done} / {total} filas',
+    loc_screen_sub:            '{done} de {total} locaciones completamente registradas',
+    badge_done:                'Hecho',
+    badge_todo:                '{count} planta',
+    badge_todo_plural:         '{count} plantas',
+    audit_topbar:              'Registrar',
+    audit_progress:            '{done} de {total} guardado',
+    btn_back_locations:        'Volver a Locaciones',
+    panel_label_plantiful:     'Record de Plantiful',
+    dr_label_location:         'Locacion',
+    dr_label_qty:              'Cantidad en Registro',
+    dr_label_status:           'Estatus',
+    dr_label_job:              'Job #',
+    panel_label_field:         'Recuento de Campo',
+    entry_label_primary:       'Locacion Principal',
+    label_location:            'Locacion',
+    label_alive:               'Vivas',
+    label_dead:                'Muertas',
+    placeholder_location:      'ejemplo F > 12 > 09',
+    split_label:               'Division {n}',
+    btn_split:                 'Anadir Division',
+    btn_save:                  'Guardar',
+    btn_clear:                 'Borrar',
+    saved_chip:                'Guardado',
+    toast_entry_saved:         'Entrada guardada',
+    toast_entry_cleared:       'Entrada borrada',
+    export_title:              'Exportar Ciclo Registrado',
+    export_desc_o1:            'Solo filas registradas - cantidad viva - listo para subir',
+    export_desc_o2:            'Totalmente registrado con plantas muertas y discrepancias',
+    stat_label_inventory:      'Filas de Inventario',
+    stat_label_audited:        'Filas Registradas',
+    btn_download_plantiful:    'Descargar Importacion de Plantiful',
+    btn_download_analytics:    'Descargar Analisis',
+    btn_back_areas:            'Volver a Areas',
+    toast_nothing_to_export:   'No hay entradas registradas para exportar',
+    toast_plantiful_downloaded:'Importacion de Plantiful descargada',
+    toast_analytics_downloaded:'Analisis descargados',
+    lang_toggle_label:         'EN'
+  }
 };
 
-// ── CSV PARSER ────────────────────────────────────────────────────────────────
+let lang = localStorage.getItem('cc_lang') || 'en';
+
+function t(key, vars = {}) {
+  let s = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+  Object.entries(vars).forEach(([k, v]) => { s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), v); });
+  return s;
+}
+
+function applyLang() {
+  document.getElementById('topbar-title').textContent = t('app_title');
+  document.getElementById('back-btn').textContent     = t('back_btn');
+  document.getElementById('lang-btn').textContent     = t('lang_toggle_label');
+  document.getElementById('session-saved-text').textContent = t('session_saved');
+  document.getElementById('btn-continue').textContent  = t('btn_continue');
+  document.getElementById('btn-new-audit').textContent = t('btn_new_audit');
+  document.getElementById('upload-title').textContent  = t('upload_title');
+  document.getElementById('upload-subtitle').textContent = t('upload_subtitle');
+  document.getElementById('areas-title').textContent   = t('areas_title');
+  document.getElementById('btn-export-results').textContent = t('btn_export_results');
+  document.getElementById('btn-back-locations').textContent = t('btn_back_locations');
+  document.getElementById('export-title').textContent  = t('export_title');
+  document.getElementById('export-desc-o1').textContent = t('export_desc_o1');
+  document.getElementById('export-desc-o2').textContent = t('export_desc_o2');
+  document.getElementById('stat-label-inventory').textContent = t('stat_label_inventory');
+  document.getElementById('stat-label-audited').textContent   = t('stat_label_audited');
+  document.getElementById('btn-download-plantiful').textContent = t('btn_download_plantiful');
+  document.getElementById('btn-download-analytics').textContent = t('btn_download_analytics');
+  document.getElementById('btn-back-areas').textContent = t('btn_back_areas');
+  document.documentElement.lang = lang;
+  // Re-render dynamic content if a screen is active
+  const active = document.querySelector('.screen.active')?.id;
+  if (active === 'screen-areas')     goToAreas();
+  if (active === 'screen-locations') goToLocations(currentArea);
+  if (active === 'screen-audit')     goToAudit(currentLocIndex);
+  if (active === 'screen-export')    goToExport();
+}
+
+function toggleLang() {
+  lang = lang === 'en' ? 'es' : 'en';
+  localStorage.setItem('cc_lang', lang);
+  applyLang();
+}
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+const STORE = {
+  inv:      () => JSON.parse(localStorage.getItem('cc_inv')   || '[]'),
+  hdrs:     () => JSON.parse(localStorage.getItem('cc_hdrs')  || '[]'),
+  audit:    () => JSON.parse(localStorage.getItem('cc_audit') || '{}'),
+  setInv:   v  => localStorage.setItem('cc_inv',   JSON.stringify(v)),
+  setHdrs:  v  => localStorage.setItem('cc_hdrs',  JSON.stringify(v)),
+  setAudit: v  => localStorage.setItem('cc_audit', JSON.stringify(v)),
+  clear:    ()  => ['cc_inv','cc_hdrs','cc_audit'].forEach(k => localStorage.removeItem(k))
+};
+
+// ── CSV ──────────────────────────────────────────────────────────────────────
 function parseCSV(raw) {
   if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
   const rows = [];
@@ -502,9 +669,9 @@ let screenStack = [];
 function showScreen(id, title, sub, showBack) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.getElementById('topbar-title').textContent = title || '🌿 Cycle Count';
-  document.getElementById('topbar-sub').textContent = sub || '';
-  document.getElementById('back-btn').style.display = showBack ? 'flex' : 'none';
+  document.getElementById('topbar-title').textContent = title || t('app_title');
+  document.getElementById('topbar-sub').textContent   = sub || '';
+  document.getElementById('back-btn').style.display   = showBack ? 'flex' : 'none';
   window.scrollTo(0, 0);
 }
 
@@ -522,15 +689,17 @@ let currentLocIndex = 0;
 function init() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-  screenStack = [() => showScreen('screen-upload', '🌿 Cycle Count', '', false)];
-  showScreen('screen-upload', '🌿 Cycle Count', '', false);
+  applyLang();
 
-  const inv = STORE.inv();
+  screenStack = [() => showScreen('screen-upload', t('app_title'), '', false)];
+  showScreen('screen-upload', t('app_title'), '', false);
+
+  const inv   = STORE.inv();
   const audit = STORE.audit();
   if (inv.length) {
     document.getElementById('session-banner').style.display = 'flex';
     document.getElementById('session-info').textContent =
-      `Session active: ${inv.length} inventory rows, ${Object.keys(audit).length} entries audited`;
+      t('session_active', { count: inv.length, audited: Object.keys(audit).length });
   }
 
   const zone = document.getElementById('upload-zone');
@@ -545,12 +714,13 @@ function init() {
 function handleFileInput(e) { const f = e.target.files[0]; if (f) loadFile(f); }
 
 async function loadFile(file) {
-  if (!file.name.toLowerCase().endsWith('.csv')) { showToast('Please select a CSV file'); return; }
-  document.getElementById('upload-zone').innerHTML = '<p>Loading…</p>';
+  if (!file.name.toLowerCase().endsWith('.csv')) { showToast(t('toast_not_csv')); return; }
+  document.getElementById('upload-title').textContent   = t('upload_loading');
+  document.getElementById('upload-subtitle').textContent = '';
   const text = await file.text();
   const { headers, rows } = parseCSV(text);
   STORE.setInv(rows); STORE.setHdrs(headers); STORE.setAudit({});
-  showToast(`Loaded ${rows.length} inventory rows`);
+  showToast(t('toast_loaded', { count: rows.length }));
   screenStack = [];
   pushNav(goToAreas);
 }
@@ -558,22 +728,17 @@ async function loadFile(file) {
 function clearSession() {
   STORE.clear();
   document.getElementById('session-banner').style.display = 'none';
-  document.getElementById('upload-zone').innerHTML = `
-    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-    </svg>
-    <strong>Upload Plantiful Export</strong>
-    <p>Tap to select a CSV file</p>`;
-  showToast('Session cleared');
+  document.getElementById('upload-title').textContent    = t('upload_title');
+  document.getElementById('upload-subtitle').textContent = t('upload_subtitle');
+  showToast(t('toast_session_cleared'));
 }
 
 // ── AREAS ─────────────────────────────────────────────────────────────────────
 function goToAreas() {
-  showScreen('screen-areas', '🌿 Cycle Count', '', false);
+  showScreen('screen-areas', t('app_title'), '', false);
 
-  const inv = STORE.inv();
+  const inv   = STORE.inv();
   const audit = STORE.audit();
-
   const areaMap = {};
   inv.forEach(row => {
     const area = (row['Locations'] || '').split('>')[0].trim();
@@ -586,7 +751,8 @@ function goToAreas() {
   const areas = Object.keys(areaMap).sort();
   let totalDone = 0, totalAll = 0;
   areas.forEach(a => { totalDone += areaMap[a].done; totalAll += areaMap[a].total; });
-  document.getElementById('areas-summary').textContent = `${totalDone} of ${totalAll} rows audited`;
+  document.getElementById('areas-summary').textContent =
+    t('areas_summary', { done: totalDone, total: totalAll });
 
   document.getElementById('area-grid').innerHTML = areas.map(area => {
     const { total, done } = areaMap[area];
@@ -594,7 +760,7 @@ function goToAreas() {
     const cls = done === total && total > 0 ? 'complete' : '';
     return `<div class="area-card ${cls}" onclick="pushNav(()=>goToLocations('${area}'))">
       <div class="area-letter">${area}</div>
-      <div class="area-stats">${done} / ${total} rows</div>
+      <div class="area-stats">${t('area_card_stats', { done, total })}</div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
@@ -603,11 +769,10 @@ function goToAreas() {
 // ── LOCATIONS ─────────────────────────────────────────────────────────────────
 function goToLocations(area) {
   currentArea = area;
-  showScreen('screen-locations', `Area ${area}`, '', true);
+  showScreen('screen-locations', `${t('audit_topbar')} — ${area}`, '', true);
 
-  const inv = STORE.inv();
+  const inv   = STORE.inv();
   const audit = STORE.audit();
-
   const locMap = {};
   inv.forEach(row => {
     const loc = (row['Locations'] || '').trim();
@@ -617,7 +782,7 @@ function goToLocations(area) {
   });
 
   currentLocData = Object.keys(locMap).sort().map(loc => {
-    const plants = locMap[loc];
+    const plants  = locMap[loc];
     const entries = plants.map(p => ({
       plant: p,
       audit: audit[`${p['Crop code']}||${loc}`] || null
@@ -627,18 +792,18 @@ function goToLocations(area) {
 
   const fullyDone = currentLocData.filter(l => l.audited === l.total).length;
   document.getElementById('loc-screen-title').textContent = `Area ${area}`;
-  document.getElementById('loc-screen-sub').textContent =
-    `${fullyDone} of ${currentLocData.length} locations fully audited`;
+  document.getElementById('loc-screen-sub').textContent   =
+    t('loc_screen_sub', { done: fullyDone, total: currentLocData.length });
 
   document.getElementById('loc-list').innerHTML = currentLocData.map((loc, i) => {
     const complete = loc.audited === loc.total && loc.total > 0;
     const partial  = loc.audited > 0 && loc.audited < loc.total;
-    const cls    = complete ? 'audited' : partial ? 'partial' : '';
-    const badge  = complete
-      ? `<span class="loc-badge badge-done">✓ Done</span>`
+    const cls   = complete ? 'audited' : partial ? 'partial' : '';
+    const badge = complete
+      ? `<span class="loc-badge badge-done">${t('badge_done')}</span>`
       : partial
       ? `<span class="loc-badge badge-partial">${loc.audited}/${loc.total}</span>`
-      : `<span class="loc-badge badge-todo">${loc.total} plant${loc.total!==1?'s':''}</span>`;
+      : `<span class="loc-badge badge-todo">${t(loc.total === 1 ? 'badge_todo' : 'badge_todo_plural', { count: loc.total })}</span>`;
     const species = loc.entries.map(e => e.plant['Species'] || e.plant['Product'] || '').filter(Boolean).join(' · ');
     return `<div class="loc-item ${cls}" onclick="pushNav(()=>goToAudit(${i}))">
       <div>
@@ -654,7 +819,7 @@ function goToLocations(area) {
 function goToAudit(locIndex) {
   currentLocIndex = locIndex;
   const loc = currentLocData[locIndex];
-  showScreen('screen-audit', 'Audit', loc.location, true);
+  showScreen('screen-audit', t('audit_topbar'), loc.location, true);
   document.getElementById('audit-loc-name').textContent = loc.location;
   renderAuditProgress();
   document.getElementById('plant-cards').innerHTML =
@@ -664,12 +829,12 @@ function goToAudit(locIndex) {
 function renderAuditProgress() {
   const loc = currentLocData[currentLocIndex];
   document.getElementById('audit-progress').textContent =
-    `${loc.audited} of ${loc.entries.length} saved`;
+    t('audit_progress', { done: loc.audited, total: loc.entries.length });
 }
 
 function buildPlantCard(entry, idx, defaultLoc) {
-  const p = entry.plant;
-  const audit = entry.audit;
+  const p       = entry.plant;
+  const audit   = entry.audit;
   const cropCode = p['Crop code'];
   const origLoc  = (p['Locations'] || '').trim();
 
@@ -677,14 +842,14 @@ function buildPlantCard(entry, idx, defaultLoc) {
     ? audit.entries
     : [{ location: origLoc, alive_qty: '', dead_qty: '' }];
 
-  const primary = formEntries[0];
+  const primary   = formEntries[0];
   const splitRows = formEntries.slice(1).map((e, si) =>
     buildSplitRow(idx, si + 1, e.location, e.alive_qty, e.dead_qty)
   ).join('');
 
   const savedCls = audit ? 'saved' : '';
   const clearBtn = audit
-    ? `<button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${idx})">Clear</button>` : '';
+    ? `<button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${idx})">${t('btn_clear')}</button>` : '';
 
   return `<div class="plant-card ${savedCls}" id="card-${idx}" data-crop="${esc(cropCode)}" data-orig-loc="${esc(origLoc)}">
     <div class="plant-card-header">
@@ -692,30 +857,30 @@ function buildPlantCard(entry, idx, defaultLoc) {
         <div class="species">${p['Species'] || p['Product'] || '—'}</div>
         <div class="crop-code">${cropCode} · ${p['Variant']||''} ${p['Current size']||''}</div>
       </div>
-      <span class="saved-chip">✓ Saved</span>
+      <span class="saved-chip">${t('saved_chip')}</span>
     </div>
     <div class="plant-card-body">
       <div class="panel-plantiful">
-        <div class="panel-label">Plantiful Record</div>
-        <div class="data-row"><div class="dr-label">Location</div><div class="dr-value">${p['Locations']}</div></div>
-        <div class="data-row"><div class="dr-label">Qty on record</div><div class="dr-value qty">${p['Available qty']}</div></div>
-        <div class="data-row"><div class="dr-label">Status</div><div class="dr-value">${p['Status']||'—'}</div></div>
-        <div class="data-row"><div class="dr-label">Job #</div><div class="dr-value">${p['Job #']||'—'}</div></div>
+        <div class="panel-label">${t('panel_label_plantiful')}</div>
+        <div class="data-row"><div class="dr-label">${t('dr_label_location')}</div><div class="dr-value">${p['Locations']}</div></div>
+        <div class="data-row"><div class="dr-label">${t('dr_label_qty')}</div><div class="dr-value qty">${p['Available qty']}</div></div>
+        <div class="data-row"><div class="dr-label">${t('dr_label_status')}</div><div class="dr-value">${p['Status']||'—'}</div></div>
+        <div class="data-row"><div class="dr-label">${t('dr_label_job')}</div><div class="dr-value">${p['Job #']||'—'}</div></div>
       </div>
       <div class="panel-entry">
-        <div class="panel-label">Field Count</div>
+        <div class="panel-label">${t('panel_label_field')}</div>
         <div class="entry-row" id="entry-primary-${idx}">
-          <div class="entry-row-header"><span class="entry-row-label">Primary location</span></div>
+          <div class="entry-row-header"><span class="entry-row-label">${t('entry_label_primary')}</span></div>
           <div class="loc-input-row">
-            <label>Location</label>
+            <label>${t('label_location')}</label>
             <input class="loc-input" id="loc-0-${idx}" type="text" value="${esc(primary.location)}">
           </div>
           <div class="qty-row">
-            <div class="qty-field"><label>Alive</label>
+            <div class="qty-field"><label>${t('label_alive')}</label>
               <input class="alive" id="alive-0-${idx}" type="number" min="0" inputmode="numeric"
                 value="${primary.alive_qty !== '' ? primary.alive_qty : ''}" placeholder="0">
             </div>
-            <div class="qty-field"><label>Dead</label>
+            <div class="qty-field"><label>${t('label_dead')}</label>
               <input class="dead" id="dead-0-${idx}" type="number" min="0" inputmode="numeric"
                 value="${primary.dead_qty !== '' ? primary.dead_qty : ''}" placeholder="0">
             </div>
@@ -723,8 +888,8 @@ function buildPlantCard(entry, idx, defaultLoc) {
         </div>
         <div id="splits-${idx}">${splitRows}</div>
         <div class="entry-actions">
-          <button class="btn btn-secondary btn-sm" onclick="addSplit(${idx},'${esc(origLoc)}')">+ Split</button>
-          <button class="btn btn-primary btn-sm" onclick="saveEntry(${idx})">Save ✓</button>
+          <button class="btn btn-secondary btn-sm" onclick="addSplit(${idx},'${esc(origLoc)}')">${t('btn_split')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEntry(${idx})">${t('btn_save')}</button>
           ${clearBtn}
         </div>
       </div>
@@ -743,18 +908,18 @@ function addSplit(cardIdx, defaultLoc) {
 function buildSplitRow(cardIdx, si, loc, alive, dead) {
   return `<div class="entry-row split-row" id="split-${cardIdx}-${si}">
     <div class="entry-row-header">
-      <span class="entry-row-label">Split ${si}</span>
-      <button class="remove-split" onclick="document.getElementById('split-${cardIdx}-${si}').remove()">×</button>
+      <span class="entry-row-label">${t('split_label', { n: si })}</span>
+      <button class="remove-split" onclick="document.getElementById('split-${cardIdx}-${si}').remove()">x</button>
     </div>
     <div class="loc-input-row">
-      <label>Location</label>
-      <input class="loc-input" id="loc-${si}-${cardIdx}" type="text" value="${esc(loc)}" placeholder="e.g. F > 12 > 09">
+      <label>${t('label_location')}</label>
+      <input class="loc-input" id="loc-${si}-${cardIdx}" type="text" value="${esc(loc)}" placeholder="${t('placeholder_location')}">
     </div>
     <div class="qty-row">
-      <div class="qty-field"><label>Alive</label>
+      <div class="qty-field"><label>${t('label_alive')}</label>
         <input class="alive" id="alive-${si}-${cardIdx}" type="number" min="0" inputmode="numeric" value="${alive}" placeholder="0">
       </div>
-      <div class="qty-field"><label>Dead</label>
+      <div class="qty-field"><label>${t('label_dead')}</label>
         <input class="dead" id="dead-${si}-${cardIdx}" type="number" min="0" inputmode="numeric" value="${dead}" placeholder="0">
       </div>
     </div>
@@ -771,10 +936,10 @@ function collectEntries(cardIdx) {
   });
   document.getElementById(`splits-${cardIdx}`)
     .querySelectorAll('.split-row').forEach(row => {
-      const si = row.id.split('-').pop();
+      const si  = row.id.split('-').pop();
       const loc = val(`loc-${si}-${cardIdx}`).trim();
       if (loc) entries.push({
-        location: loc,
+        location:  loc,
         alive_qty: val(`alive-${si}-${cardIdx}`) || 0,
         dead_qty:  val(`dead-${si}-${cardIdx}`)  || 0
       });
@@ -783,7 +948,7 @@ function collectEntries(cardIdx) {
 }
 
 function saveEntry(cardIdx) {
-  const card = document.getElementById(`card-${cardIdx}`);
+  const card     = document.getElementById(`card-${cardIdx}`);
   const cropCode = card.dataset.crop;
   const origLoc  = card.dataset.origLoc;
   const entries  = collectEntries(cardIdx);
@@ -803,16 +968,16 @@ function saveEntry(cardIdx) {
   loc.audited = loc.entries.filter(e => e.audit).length;
 
   card.querySelector('.entry-actions').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="addSplit(${cardIdx},'${esc(origLoc)}')">+ Split</button>
-    <button class="btn btn-primary btn-sm" onclick="saveEntry(${cardIdx})">Save ✓</button>
-    <button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${cardIdx})">Clear</button>`;
+    <button class="btn btn-secondary btn-sm" onclick="addSplit(${cardIdx},'${esc(origLoc)}')">${t('btn_split')}</button>
+    <button class="btn btn-primary btn-sm" onclick="saveEntry(${cardIdx})">${t('btn_save')}</button>
+    <button class="btn btn-sm" style="background:#f3f4f6;color:var(--red)" onclick="clearEntry(${cardIdx})">${t('btn_clear')}</button>`;
 
-  showToast('Entry saved');
+  showToast(t('toast_entry_saved'));
   renderAuditProgress();
 }
 
 function clearEntry(cardIdx) {
-  const card = document.getElementById(`card-${cardIdx}`);
+  const card     = document.getElementById(`card-${cardIdx}`);
   const cropCode = card.dataset.crop;
   const origLoc  = card.dataset.origLoc;
 
@@ -826,12 +991,12 @@ function clearEntry(cardIdx) {
 
   card.outerHTML = buildPlantCard(loc.entries[cardIdx], cardIdx, loc.location);
   renderAuditProgress();
-  showToast('Entry cleared');
+  showToast(t('toast_entry_cleared'));
 }
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function goToExport() {
-  showScreen('screen-export', 'Export', '', true);
+  showScreen('screen-export', t('export_title'), '', true);
   const inv   = STORE.inv();
   const audit = STORE.audit();
   document.getElementById('export-total').textContent   = inv.length;
@@ -845,16 +1010,13 @@ function buildOutputs() {
   const o1 = [], o2 = [];
 
   Object.values(audit).forEach(a => {
-    const orig = inv.find(r => r['Crop code'] === a.crop_code && r['Locations'].trim() === a.original_location);
+    const orig    = inv.find(r => r['Crop code'] === a.crop_code && r['Locations'].trim() === a.original_location);
     const origQty = parseInt(orig?.['Available qty'] || '0', 10) || 0;
 
     a.entries.forEach(e => {
       const alive = parseInt(e.alive_qty, 10) || 0;
       const dead  = parseInt(e.dead_qty,  10) || 0;
-      if (orig) {
-        const row = { ...orig, 'Available qty': String(alive), 'Locations': e.location };
-        o1.push(row);
-      }
+      if (orig) o1.push({ ...orig, 'Available qty': String(alive), 'Locations': e.location });
       o2.push({
         'Crop code': a.crop_code,
         'Species': orig?.['Species'] || '',
@@ -874,21 +1036,21 @@ function buildOutputs() {
 
 function downloadPlantiful() {
   const { o1, hdrs } = buildOutputs();
-  if (!o1.length) { showToast('No audited entries to export'); return; }
+  if (!o1.length) { showToast(t('toast_nothing_to_export')); return; }
   const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
   downloadCSV(`plantiful_import_${stamp}.csv`, toCSV(hdrs, o1));
-  showToast('Plantiful import downloaded');
+  showToast(t('toast_plantiful_downloaded'));
 }
 
 function downloadAnalytics() {
   const { o2 } = buildOutputs();
-  if (!o2.length) { showToast('No audited entries to export'); return; }
+  if (!o2.length) { showToast(t('toast_nothing_to_export')); return; }
   const o2hdrs = ['Crop code','Species','Original location','Audited location',
     'Original Plantiful qty','Alive qty (field)','Dead qty',
     'Total counted','Discrepancy (alive vs Plantiful)','Audit timestamp'];
   const stamp = new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
   downloadCSV(`audit_analytics_${stamp}.csv`, toCSV(o2hdrs, o2));
-  showToast('Analytics downloaded');
+  showToast(t('toast_analytics_downloaded'));
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
