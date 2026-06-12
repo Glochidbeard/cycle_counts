@@ -362,6 +362,10 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="update-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--green);color:white;padding:14px 20px;display:none;align-items:center;justify-content:space-between;z-index:1000;gap:12px;flex-wrap:wrap;">
+  <span id="update-msg">A new version is available.</span>
+  <button onclick="location.reload()" style="background:white;color:var(--green);border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">Reload</button>
+</div>
 
 <!-- UPLOAD -->
 <div class="screen active" id="screen-upload">
@@ -687,7 +691,12 @@ let currentLocIndex = 0;
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 function init() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'SW_UPDATED') showUpdateBanner();
+    });
+  }
 
   applyLang();
 
@@ -1059,6 +1068,13 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function showUpdateBanner() {
+  const banner = document.getElementById('update-banner');
+  banner.style.display = 'flex';
+  document.getElementById('update-msg').textContent =
+    lang === 'es' ? 'Nueva version disponible.' : 'A new version is available.';
 }
 
 function esc(s) {
