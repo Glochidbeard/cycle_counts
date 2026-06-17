@@ -457,9 +457,20 @@ const splitCounters = {};
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 function init() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') showUpdateBanner();
+        });
+      });
+    });
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data?.type==='SW_UPDATED') showUpdateBanner();
+    });
+    // Show banner if a newer SW is already waiting
+    navigator.serviceWorker.ready.then(reg => {
+      if (reg.waiting) showUpdateBanner();
     });
   }
   applyLang();
