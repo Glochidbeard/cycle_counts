@@ -262,7 +262,7 @@ const STRINGS = {
     panel_label_plantiful:'Plantiful Record', dr_label_location:'Location',
     dr_label_qty:'Qty on record', dr_label_status:'Status', dr_label_job:'Job #',
     dr_label_lot:'Lot #', dr_label_specific_loc:'Specific Location',
-    dr_label_qty_trays:'Qty of Trays',
+    dr_label_qty_trays:'Qty of Trays', dr_label_abecas_lot:'Abecas Lot',
     panel_label_field:'Field Count', entry_label_primary:'Primary location',
     label_location:'Location', label_alive:'Alive', label_dead:'Dead',
     placeholder_location:'e.g. F > 12 > 09',
@@ -299,7 +299,7 @@ const STRINGS = {
     panel_label_plantiful:'Record de Plantiful', dr_label_location:'Locacion',
     dr_label_qty:'Cantidad en Registro', dr_label_status:'Estatus', dr_label_job:'Job #',
     dr_label_lot:'Lote #', dr_label_specific_loc:'Locacion Especifica',
-    dr_label_qty_trays:'Cantidad de Charolas',
+    dr_label_qty_trays:'Cantidad de Charolas', dr_label_abecas_lot:'Lote Abecas',
     panel_label_field:'Recuento de Campo', entry_label_primary:'Locacion Principal',
     label_location:'Locacion', label_alive:'Vivas', label_dead:'Muertas',
     placeholder_location:'ejemplo F > 12 > 09',
@@ -628,7 +628,8 @@ function buildPlantCard(entry, idx, audit) {
   const extraFields = [
     p['Lot #']             ? `<div class="data-row"><div class="dr-label">${t('dr_label_lot')}</div><div class="dr-value">${p['Lot #']}</div></div>` : '',
     p['Specific location'] ? `<div class="data-row"><div class="dr-label">${t('dr_label_specific_loc')}</div><div class="dr-value">${p['Specific location']}</div></div>` : '',
-    (liner && p['Qty of trays']) ? `<div class="data-row"><div class="dr-label">${t('dr_label_qty_trays')}</div><div class="dr-value">${p['Qty of trays']}</div></div>` : ''
+    (liner && p['Qty of trays']) ? `<div class="data-row"><div class="dr-label">${t('dr_label_qty_trays')}</div><div class="dr-value">${p['Qty of trays']}</div></div>` : '',
+    p['Abecas Lot'] ? `<div class="data-row"><div class="dr-label">${t('dr_label_abecas_lot')}</div><div class="dr-value">${p['Abecas Lot']}</div></div>` : ''
   ].join('');
 
   return `<div class="plant-card ${savedCls} ${newCls}" id="card-${idx}" data-key="${esc(auditKey)}" data-orig-loc="${esc(origLoc)}" data-new="${isNew}">
