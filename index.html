@@ -928,6 +928,35 @@ function lotFromCrop(crop){
   return i===-1?crop:crop.slice(0,i);
 }
 
+// Parse a date string in M/D/YYYY or YYYY-MM-DD to a JS Date (midnight UTC).
+// Returns null if unparseable.
+function parseDate(s) {
+  s = (s||'').trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(Date.UTC(+m[3], +m[1]-1, +m[2]));
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  return null;
+}
+
+// Build the prior-victimhood string from the original Plantiful row.
+// Format: [Status: X, Duration: Y days] ... one bracket per historical entry.
+// Currently Plantiful stores one victim status per row; structure supports multiples later.
+function priorVictimHistory(orig, auditTimestamp) {
+  if (!orig) return '';
+  const status = (orig['Victim of']||'').trim();
+  if (!status) return '';
+  const noticed = parseDate(orig['Date problem noticed']);
+  const auditDate = parseDate((auditTimestamp||'').slice(0,10));
+  let duration = '';
+  if (noticed && auditDate) {
+    const days = Math.round((auditDate - noticed) / 86400000);
+    duration = ', Duration: ' + days + ' day' + (days===1?'':'s');
+  }
+  return '[Status: ' + status + duration + ']';
+}
+
 function buildOutputs() {
   const inv=STORE.inv(), hdrs=STORE.hdrs(), audit=STORE.audit();
   const o1=[],o2=[],o3=[];
@@ -939,6 +968,7 @@ function buildOutputs() {
     const victimOf   = a.victim_of    || '';
     const dateNoticed= a.date_noticed || '';
     const followUp   = a.follow_up_date || '';
+    const priorHistory = priorVictimHistory(orig, a.timestamp);
 
     a.entries.forEach(e=>{
       const alive=parseInt(e.alive_qty,10)||0;
@@ -967,6 +997,7 @@ function buildOutputs() {
         'Total counted':     alive+dead,
         'Discrepancy (alive vs Plantiful)': isNew?'N/A':alive-origQty,
         'New item flag':     isNew ? '*** NEW ITEM - NOT IN PLANTIFUL INVENTORY ***' : '',
+        'Prior victimhood history': priorHistory,
         'Victim of':         victimOf,
         'Date problem noticed': isoToDisplay(dateNoticed),
         'Follow up date':    isoToDisplay(followUp),
@@ -1009,6 +1040,7 @@ function downloadAnalytics() {
   const o2hdrs=['Crop code','Species','Original location','Audited location',
     'Original Plantiful qty','Alive qty (field)','Dead qty','Total counted',
     'Discrepancy (alive vs Plantiful)','New item flag',
+    'Prior victimhood history',
     'Victim of','Date problem noticed','Follow up date','Audit timestamp'];
   const stamp=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
   downloadCSV(`audit_analytics_${stamp}.csv`,toCSV(o2hdrs,o2));
