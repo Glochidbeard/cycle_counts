@@ -1,4 +1,4 @@
-const CACHE = 'cycle-count-v2';
+const CACHE = 'cycle-count-v3';
 const ASSETS = ['.', 'index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {

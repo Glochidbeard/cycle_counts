@@ -148,6 +148,16 @@
   .stat-box .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .export-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+  /* VICTIM SECTION */
+  .victim-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .victim-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+  .victim-select { width: 100%; padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 15px; background: white; color: var(--text); margin-bottom: 8px; }
+  .victim-select.has-victim { border-color: var(--amber); color: #8f5000; font-weight: 700; }
+  .victim-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .victim-date-field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .victim-date-field input { width: 100%; padding: 9px 8px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; color: var(--text); }
+  .victim-date-field input:focus { outline: none; border-color: var(--amber); }
+
   /* TOAST & BANNER */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; color: white; padding: 11px 22px; border-radius: 40px; font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -231,7 +241,8 @@
   <div class="export-card">
     <h2 id="export-title"></h2>
     <p><strong>plantiful_import.csv</strong> — <span id="export-desc-o1"></span><br>
-       <strong>audit_analytics.csv</strong> — <span id="export-desc-o2"></span></p>
+       <strong>audit_analytics.csv</strong> — <span id="export-desc-o2"></span><br>
+       <strong>illness_report.csv</strong> — <span id="export-desc-o3"></span></p>
     <div class="export-stats">
       <div class="stat-box"><div class="num" id="export-total">—</div><div class="lbl" id="stat-label-inventory"></div></div>
       <div class="stat-box"><div class="num" id="export-audited">—</div><div class="lbl" id="stat-label-audited"></div></div>
@@ -239,6 +250,7 @@
     <div class="export-btns">
       <button class="btn btn-primary" style="font-size:16px;padding:14px 28px" onclick="downloadPlantiful()" id="btn-download-plantiful"></button>
       <button class="btn btn-secondary" style="font-size:16px;padding:14px 28px" onclick="downloadAnalytics()" id="btn-download-analytics"></button>
+      <button class="btn btn-amber" style="font-size:16px;padding:14px 28px" onclick="downloadIllness()" id="btn-download-illness"></button>
     </div>
   </div>
   <button class="btn btn-secondary btn-full" onclick="goToAreas()" id="btn-back-areas"></button>
@@ -282,7 +294,17 @@ const STRINGS = {
     btn_download_analytics:'Download Analytics', btn_back_areas:'Back to Areas',
     toast_nothing_to_export:'No audited entries to export',
     toast_plantiful_downloaded:'Plantiful import downloaded',
-    toast_analytics_downloaded:'Analytics downloaded', lang_toggle_label:'ES'
+    toast_analytics_downloaded:'Analytics downloaded',
+    export_desc_o3:'Victim plants only - illness data for Plantiful upload',
+    btn_download_illness:'Download Illness Report',
+    toast_illness_downloaded:'Illness report downloaded',
+    toast_no_victims:'No victim plants to export',
+    label_victim_of:'Victim of', label_date_noticed:'Date noticed',
+    label_follow_up:'Follow up date',
+    victim_opt_none:'— (healthy)', victim_opt_irrigation:'Irrigation',
+    victim_opt_cured:'Cured', victim_opt_shipping:'Shipping',
+    victim_opt_pests:'Pests', victim_opt_disease:'Disease',
+    lang_toggle_label:'ES'
   },
   es: {
     app_title:'Recuento del Ciclo', back_btn:'Atras',
@@ -319,7 +341,17 @@ const STRINGS = {
     btn_download_analytics:'Descargar Analisis', btn_back_areas:'Volver a Areas',
     toast_nothing_to_export:'No hay entradas registradas para exportar',
     toast_plantiful_downloaded:'Importacion de Plantiful descargada',
-    toast_analytics_downloaded:'Analisis descargados', lang_toggle_label:'EN'
+    toast_analytics_downloaded:'Analisis descargados',
+    export_desc_o3:'Solo plantas victima - datos de enfermedad para subir a Plantiful',
+    btn_download_illness:'Descargar Reporte de Enfermedades',
+    toast_illness_downloaded:'Reporte de enfermedades descargado',
+    toast_no_victims:'No hay plantas victima para exportar',
+    label_victim_of:'Victima de', label_date_noticed:'Fecha notada',
+    label_follow_up:'Fecha de seguimiento',
+    victim_opt_none:'— (saludable)', victim_opt_irrigation:'Irrigacion',
+    victim_opt_cured:'Curada', victim_opt_shipping:'Envio',
+    victim_opt_pests:'Plagas', victim_opt_disease:'Enfermedad',
+    lang_toggle_label:'EN'
   }
 };
 
@@ -343,7 +375,10 @@ function applyLang() {
     'export-desc-o2': 'export_desc_o2', 'stat-label-inventory': 'stat_label_inventory',
     'stat-label-audited': 'stat_label_audited',
     'btn-download-plantiful': 'btn_download_plantiful',
-    'btn-download-analytics': 'btn_download_analytics', 'btn-back-areas': 'btn_back_areas'
+    'btn-download-analytics': 'btn_download_analytics',
+    'btn-download-illness': 'btn_download_illness',
+    'export-desc-o3': 'export_desc_o3',
+    'btn-back-areas': 'btn_back_areas'
   };
   Object.entries(ids).forEach(([id, key]) => {
     const el = document.getElementById(id);
@@ -411,6 +446,29 @@ function downloadCSV(filename, content) {
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=filename; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// ── VICTIM OPTIONS ────────────────────────────────────────────────────────────
+const VICTIM_OPTIONS = ['Irrigation','Cured','Shipping','Pests','Disease'];
+const FOLLOWUP_DAYS = 7;
+
+function pad2(n){ return n<10?'0'+n:''+n; }
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function addDaysISO(iso,days){ const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+days); return dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(dt.getDate()); }
+function isoToDisplay(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); return m+'/'+d+'/'+y; }
+
+function onVictimChange(cardIdx) {
+  const sel = document.getElementById(`victim-of-${cardIdx}`);
+  const datesDiv = document.getElementById(`victim-dates-${cardIdx}`);
+  const val = sel.value;
+  sel.className = 'victim-select' + (val ? ' has-victim' : '');
+  datesDiv.style.display = val ? '' : 'none';
+  if (val) {
+    const noticedEl = document.getElementById(`victim-noticed-${cardIdx}`);
+    const followEl  = document.getElementById(`victim-followup-${cardIdx}`);
+    if (!noticedEl.value) { noticedEl.value = todayISO(); }
+    if (!followEl.value)  { followEl.value = addDaysISO(noticedEl.value||todayISO(), FOLLOWUP_DAYS); }
+  }
 }
 
 // ── LINER DETECTION ───────────────────────────────────────────────────────────
@@ -606,6 +664,34 @@ function renderAreaCards(audit) {
   document.getElementById('plant-cards').innerHTML = html;
 }
 
+function buildVictimSection(cardIdx, auditEntry) {
+  const victimOf  = auditEntry?.victim_of    || '';
+  const noticed   = auditEntry?.date_noticed || '';
+  const followUp  = auditEntry?.follow_up_date || '';
+  const hasCls    = victimOf ? ' has-victim' : '';
+  const datesStyle= victimOf ? '' : 'display:none';
+  const opts = VICTIM_OPTIONS.map(o =>
+    `<option value="${o}"${o===victimOf?' selected':''}>${t('victim_opt_'+o.toLowerCase())}</option>`
+  ).join('');
+  return `<div class="victim-section">
+    <div class="victim-label">${t('label_victim_of')}</div>
+    <select class="victim-select${hasCls}" id="victim-of-${cardIdx}" onchange="onVictimChange(${cardIdx})">
+      <option value="">${t('victim_opt_none')}</option>
+      ${opts}
+    </select>
+    <div class="victim-dates" id="victim-dates-${cardIdx}" style="${datesStyle}">
+      <div class="victim-date-field">
+        <label>${t('label_date_noticed')}</label>
+        <input type="date" id="victim-noticed-${cardIdx}" value="${noticed}">
+      </div>
+      <div class="victim-date-field">
+        <label>${t('label_follow_up')}</label>
+        <input type="date" id="victim-followup-${cardIdx}" value="${followUp}">
+      </div>
+    </div>
+  </div>`;
+}
+
 function buildPlantCard(entry, idx, audit) {
   const {plant:p, auditKey, isNew} = entry;
   const a = audit[auditKey];
@@ -669,6 +755,7 @@ function buildPlantCard(entry, idx, audit) {
           </div>
         </div>
         <div id="splits-${idx}">${splitRows}</div>
+        ${buildVictimSection(idx, a)}
         <div class="entry-actions">
           <button class="btn btn-secondary btn-sm" onclick="addSplit(${idx},'${esc(origLoc)}')">${t('btn_split')}</button>
           <button class="btn btn-primary btn-sm" onclick="saveEntry(${idx})">${t('btn_save')}</button>
@@ -722,6 +809,10 @@ function saveEntry(cardIdx) {
   const isNewItem=card.dataset.new==='true';
   const entries=collectEntries(cardIdx);
 
+  const victimOf  = document.getElementById(`victim-of-${cardIdx}`)?.value || '';
+  const noticed   = document.getElementById(`victim-noticed-${cardIdx}`)?.value || '';
+  const followUp  = document.getElementById(`victim-followup-${cardIdx}`)?.value || '';
+
   const audit=STORE.audit();
   const existing=audit[auditKey]||{};
   audit[auditKey]={
@@ -729,6 +820,9 @@ function saveEntry(cardIdx) {
     crop_code: flatEntries[cardIdx].plant['Crop code'],
     original_location: origLoc,
     entries,
+    victim_of: victimOf,
+    date_noticed: victimOf ? noticed : '',
+    follow_up_date: victimOf ? followUp : '',
     timestamp: new Date().toISOString()
   };
   STORE.setAudit(audit);
@@ -829,14 +923,22 @@ function goToExport() {
   document.getElementById('export-audited').textContent = Object.keys(audit).length;
 }
 
+function lotFromCrop(crop){
+  crop=(crop||'').trim(); const i=crop.indexOf('-');
+  return i===-1?crop:crop.slice(0,i);
+}
+
 function buildOutputs() {
   const inv=STORE.inv(), hdrs=STORE.hdrs(), audit=STORE.audit();
-  const o1=[],o2=[];
+  const o1=[],o2=[],o3=[];
 
   Object.values(audit).forEach(a=>{
     const isNew=!!a.is_new;
     const orig=isNew ? null : inv.find(r=>r['Crop code']===a.crop_code&&r['Locations'].trim()===a.original_location);
     const origQty=isNew?0:parseInt(orig?.['Available qty']||'0',10)||0;
+    const victimOf   = a.victim_of    || '';
+    const dateNoticed= a.date_noticed || '';
+    const followUp   = a.follow_up_date || '';
 
     a.entries.forEach(e=>{
       const alive=parseInt(e.alive_qty,10)||0;
@@ -865,11 +967,32 @@ function buildOutputs() {
         'Total counted':     alive+dead,
         'Discrepancy (alive vs Plantiful)': isNew?'N/A':alive-origQty,
         'New item flag':     isNew ? '*** NEW ITEM - NOT IN PLANTIFUL INVENTORY ***' : '',
+        'Victim of':         victimOf,
+        'Date problem noticed': isoToDisplay(dateNoticed),
+        'Follow up date':    isoToDisplay(followUp),
         'Audit timestamp':   a.timestamp
       });
     });
+
+    // Illness export: one row per audited entry with victim status (alive victims only)
+    if (victimOf) {
+      a.entries.forEach(e=>{
+        const alive=parseInt(e.alive_qty,10)||0;
+        o3.push({
+          'SKU':                  orig?.['SKU']||'',
+          'Lot #':                orig?.['Lot #']||lotFromCrop(a.crop_code),
+          'Crop code':            a.crop_code,
+          'Product':              isNew?(a.species||''):(orig?.['Product']||orig?.['Species']||''),
+          'Locations':            e.location,
+          'Qty':                  String(alive),
+          'Victim of':            victimOf,
+          'Date problem noticed': isoToDisplay(dateNoticed),
+          'Follow up date':       isoToDisplay(followUp)
+        });
+      });
+    }
   });
-  return {o1,o2,hdrs};
+  return {o1,o2,o3,hdrs};
 }
 
 function downloadPlantiful() {
@@ -885,10 +1008,21 @@ function downloadAnalytics() {
   if(!o2.length){showToast(t('toast_nothing_to_export'));return;}
   const o2hdrs=['Crop code','Species','Original location','Audited location',
     'Original Plantiful qty','Alive qty (field)','Dead qty','Total counted',
-    'Discrepancy (alive vs Plantiful)','New item flag','Audit timestamp'];
+    'Discrepancy (alive vs Plantiful)','New item flag',
+    'Victim of','Date problem noticed','Follow up date','Audit timestamp'];
   const stamp=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
   downloadCSV(`audit_analytics_${stamp}.csv`,toCSV(o2hdrs,o2));
   showToast(t('toast_analytics_downloaded'));
+}
+
+function downloadIllness() {
+  const {o3}=buildOutputs();
+  if(!o3.length){showToast(t('toast_no_victims'));return;}
+  const o3hdrs=['SKU','Lot #','Crop code','Product','Locations','Qty',
+    'Victim of','Date problem noticed','Follow up date'];
+  const stamp=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+  downloadCSV(`illness_report_${stamp}.csv`,toCSV(o3hdrs,o3));
+  showToast(t('toast_illness_downloaded'));
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
