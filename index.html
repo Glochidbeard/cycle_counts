@@ -724,7 +724,13 @@ function saveEntry(cardIdx) {
 
   const audit=STORE.audit();
   const existing=audit[auditKey]||{};
-  audit[auditKey]={...existing, entries, timestamp:new Date().toISOString()};
+  audit[auditKey]={
+    ...existing,
+    crop_code: flatEntries[cardIdx].plant['Crop code'],
+    original_location: origLoc,
+    entries,
+    timestamp: new Date().toISOString()
+  };
   STORE.setAudit(audit);
 
   flatEntries[cardIdx].audit = audit[auditKey];
