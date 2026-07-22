@@ -620,7 +620,7 @@ function goToArea(area) {
   });
 
   flatEntries = [];
-  Object.keys(locMap).sort().forEach(loc=>{
+  Object.keys(locMap).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).forEach(loc=>{
     locMap[loc].forEach(plant=>{
       flatEntries.push({plant, auditKey:`${plant['Crop code']}||${loc}`, isNew:false, originalLoc:loc});
     });
