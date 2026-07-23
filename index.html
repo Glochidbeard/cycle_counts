@@ -556,6 +556,21 @@ async function loadFile(file) {
   document.getElementById('upload-subtitle').textContent = '';
   const text = await file.text();
   const {headers, rows} = parseCSV(text);
+
+  // Warn loudly if the qty column is missing — all alive pre-fills will show 0
+  // without this and there's no other error signal.
+  const REQUIRED_COLS = ['Crop code', 'Locations', 'Available qty'];
+  const missing = REQUIRED_COLS.filter(c => !headers.includes(c));
+  if (missing.length) {
+    const found = headers.join(', ');
+    alert(
+      'Warning: this file is missing expected column(s): ' + missing.join(', ') + '.\n\n' +
+      'Alive quantities will show as 0 for all plants.\n\n' +
+      'Columns found: ' + found + '\n\n' +
+      'Check that you exported a Plantiful inventory CSV.'
+    );
+  }
+
   STORE.setInv(rows); STORE.setHdrs(headers); STORE.setAudit({});
   showToast(t('toast_loaded',{count:rows.length}));
   navStack = [];
